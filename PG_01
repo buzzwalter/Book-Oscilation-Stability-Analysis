@@ -1,0 +1,176 @@
+GlowScript 2.9 VPython
+#Stability Anylsis of a Rotating Book
+#Description: Takes in perturbation parameters from the user to simulate the stability of oscilations about the principle axes of a book.  Trajectory is numerically integrated from
+# the Euler equations.
+scene.width = 900
+scene.height = 450
+scene.range = 1.3
+scene.title = "Stable vs Unstable Oscillations \n"
+rps = 1.0
+Nt = 8000
+h = 0.01
+# Moments
+I_1 = 3.0
+I_2 = 4.0
+I_3 = 5.0
+w_1 = []
+w_2 = []
+w_3 = []
+running = False
+# Perturbation parameters
+p_A = 0.0
+p_B = 0.0
+
+axis1 = arrow(color = vec(1.0,0.0,0.0), axis = vec(1.0,0.0,0.0),shaftwidth = .01)
+axis2 = arrow(color =  vec(0.0,1.0,0.0), axis = vec(0.0,1.0,0.0),shaftwidth = .01)
+axis3 = arrow(make_trail = True, color =  vec(0.0,0.0,1.0), axis = vec(0.0,0.0,1.0),shaftwidth = 0.01)
+book = box(opacity=0.5, height=0.3/2,length=3.0/2,width=1.0, up = vec(0.0,0.0,1.0), axis = vec(0.0,1.0,0.0))
+
+scene.caption = "Change the perturbation factors. \n"
+ 
+#Funtion: Run()
+#Description: Binded function to the button which controls start and stop
+#Parameters:n/a.
+#Returns: n/a.
+def Run(r):
+    global running
+    running = not running
+    if running: r.text = "Stop"
+    else: r.text = "Start"
+
+button(text="Start", pos=scene.title_anchor, bind=Run)
+
+#Funtion: S_1()
+#Description: Binded function to the p_A perturbation slider.
+#Returns: n/a.
+def S_1(s):
+    global p_A
+    wt_1.text = '{:1.2f}'.format(s.value)
+    p_A = s.value    
+
+sl_1 = slider( bind =S_1, value =.0, min = 0.0, max = 0.2, length = 250)
+wt_1 = wtext(text='{:1.2f}'.format(sl_1.value))
+
+scene.append_to_caption('rad/s \n')
+
+#Funtion: S_2()
+#Description: Binded function to the p_B perturbation slider.
+#Returns: n/a.
+def S_2(s):
+    global p_B
+    wt_2.text = '{:1.2f}'.format(s.value)
+    p_B = s.value
+    
+sl_2 = slider( bind =S_2, value =.0, min = 0.0, max = 0.2, length = 250)
+wt_2 = wtext(text='{:1.2f}'.format(sl_2.value))
+
+scene.append_to_caption('rad/s \n')
+
+#Funtion: S_1()
+#Description: Binded function to the menu allowing for the change in axis of starting rotation.
+#Returns: n/a.
+def M(m):
+    global chx
+    chx = m.selected
+    if(chx == 'y axis'):
+        del w_1[:]
+        del w_2[:]
+        del w_3[:]
+        book.up = vec(0.0,1.0,0.0)
+        book.axis = vec(0.0,0.0,1.0)
+        book.height = 3.0/2
+        book.length = 0.3/2
+        book.width = 1.0
+        w_1.append(rps)
+        w_2.append(p_A)
+        w_3.append(p_B)
+    elif(chx == 'z axis'):
+        del w_1[:]
+        del w_2[:]
+        del w_3[:]
+        book.up = vec(0.0,0.0,1.0)
+        book.axis = vec(0.0,1.0,0.0)
+        book.height=0.3/2
+        book.length=3.0/2
+        book.width=1.0
+        w_1.append(p_A)
+        w_2.append(p_B)
+        w_3.append(rps)
+    elif(chx == 'x axis'):
+        del w_1[:]
+        del w_2[:]
+        del w_3[:]
+        book.up = vec(1.0,0.0,0.0)
+        book.axis = vec(0.0,1.0,0.0)
+        book.height = 1.0
+        book.length = 3.0/2
+        book.width = 0.3/2
+        w_1.append(p_B)
+        w_2.append(rps)
+        w_3.append(p_A)
+    
+M = menu(pos = scene.title_anchor, choices=['Choose an Axis', 'x axis', 'y axis', 'z axis'], bind=M)
+scene.append_to_caption('1. Select perturbation parameters. \n')
+scene.append_to_caption('2. Choose an axis. \n')
+scene.append_to_caption('3. Start!')
+
+dt = h 
+i = 0
+#Time evolution of system
+while(True):
+    rate(350)
+    if(running and chx == 'z axis'):
+        w_1.append(((I_2 - I_3)/I_1)*w_2[i]*w_3[i]*h + w_1[i])
+        w_2.append(((I_3 - I_1)/I_2)*w_1[i]*w_3[i]*h + w_2[i])
+        w_3.append(((I_1 - I_2)/I_3)*w_1[i]*w_2[i]*h + w_3[i])
+        book.up = vec(w_2[i+1],w_1[i+1],w_3[i+1])
+        w_o = sqrt(w_2[i+1]**2+w_1[i+1]**2+rps**2)
+        book.rotate(angle=w_o*dt, axis=book.up, origin=book.pos)
+        if i == Nt:
+            running = False
+            book.up = vec(0.0,0.0,1.0)
+            book.axis = vec(0.0,1.0,0.0)
+            book.height=0.3/2
+            book.length=3.0/2
+            book.width=1.0
+            M.selected = M.choices[0]
+            print("Choose another axis.")
+        i = i + 1
+    elif(running and chx == 'y axis'):
+        w_1.append(((I_2 - I_3)/I_1)*w_2[i]*w_3[i]*h + w_1[i])
+        w_2.append(((I_3 - I_1)/I_2)*w_1[i]*w_3[i]*h + w_2[i])
+        w_3.append(((I_1 - I_2)/I_3)*w_1[i]*w_2[i]*h + w_3[i])
+        book.up = vec(w_2[i+1],1.0,w_3[i+1])
+        w_o = sqrt(w_2[i+1]**2+w_1[i+1]**2+rps**2)
+        book.rotate(angle=w_o*dt, axis=book.up, origin=book.pos)
+        if i == Nt:
+            running = False
+            book.up = vec(0.0,0.0,1.0)
+            book.axis = vec(0.0,1.0,0.0)
+            book.height=0.3/2
+            book.length=3.0/2
+            book.width=1.0
+            M.selected = M.choices[0]            
+            print("Choose another axis.")
+        i = i + 1
+    elif(running and chx == 'x axis'):
+        w_1.append(((I_2 - I_3)/I_1)*w_2[i]*w_3[i]*h + w_1[i])
+        w_2.append(((I_3 - I_1)/I_2)*w_1[i]*w_3[i]*h + w_2[i])
+        w_3.append(((I_1 - I_2)/I_3)*w_1[i]*w_2[i]*h + w_3[i])
+        book.up = vec(w_2[i+1],w_1[i+1],w_3[i+1])
+        w_o = sqrt(w_2[i+1]**2+w_1[i+1]**2+rps**2)
+        book.rotate(angle=w_o*dt, axis=book.up, origin=book.pos)
+        if i == Nt:
+            running = False
+            book.up = vec(0.0,0.0,1.0)
+            book.axis = vec(0.0,1.0,0.0)
+            book.height=0.3/2
+            book.length=3.0/2
+            book.width=1.0
+            M.selected = M.choices[0]
+            print("Choose another axis.")
+        i = i + 1
+
+    else:
+        #reset
+        i = 0
